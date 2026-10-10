@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { I18nProvider } from "@/components/i18n-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { BASE_PATH } from "@/lib/deployment";
 import { dir, isLocale, LOCALES, translate } from "@/lib/i18n";
 import "../globals.css";
 
@@ -24,7 +25,7 @@ export async function generateMetadata({ params }: LayoutProps<"/[locale]">): Pr
   return {
     title: translate(l, "app.title"),
     description: translate(l, "app.subtitle"),
-    icons: { icon: "/favicon.ico" },
+    icons: { icon: `${BASE_PATH}/favicon.ico` },
   };
 }
 

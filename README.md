@@ -64,7 +64,7 @@ src/lib/legal/          calculation engine (pure TypeScript, no UI dependency)
   __tests__/            Vitest scenarios
 src/lib/i18n/           Arabic and French dictionaries, number/date formatting
 src/lib/export/         PDF (@react-pdf/renderer) and Excel (exceljs) reports
-src/lib/server/         versioned rules store (server only)
+src/lib/server/         versioned rules store, rule loading per deployment (server only)
 src/app/[locale]/       calculator and admin pages
 src/app/api/rules/      rules API (GET active rules, POST new version, restore)
 docs/                   workbook analysis and legal verification status
@@ -125,3 +125,27 @@ ADMIN_TOKEN=… RULES_STORE_PATH=/var/lib/indemnites/rules-store.json npm start
   read-only and update `seed.ts` through code review, or mount a persistent
   volume.
 - Serve over HTTPS. The admin token is sent in a request header.
+
+### GitHub Pages (static, read-only)
+
+`.github/workflows/deploy.yml` type-checks, tests, and publishes a static export
+to <https://lubair.github.io/moroccan-employment-compensation/> on every push
+to `main`. In the repository settings, set **Pages → Source** to
+**GitHub Actions**.
+
+To reproduce the build locally:
+
+```bash
+GITHUB_PAGES=true npm run build   # writes ./out with base path /moroccan-employment-compensation
+```
+
+Differences from the server deployment:
+
+- The calculator, both languages, and PDF/Excel exports run fully in the
+  browser and work unchanged.
+- Legal rules are taken from `src/lib/legal/rules/seed.ts` at build time and
+  validated; an invalid seed fails the build. Versions saved through the admin
+  into `data/rules-store.json` are **not** published.
+- `/api/rules` is not exported and `/{locale}/admin` only shows a notice that
+  administration is unavailable. To publish a rule change, edit `seed.ts`,
+  run `npm test`, and push.

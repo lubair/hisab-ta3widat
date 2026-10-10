@@ -439,6 +439,8 @@ export const fr: Record<string, string> = {
   "admin.open": "Ouvrir",
   "admin.validation.source": "Décret et URL officielle obligatoires.",
   "admin.locked.title": "Administration verrouillée",
+  "admin.static.title": "Administration indisponible sur la version publiée",
+  "admin.static.desc": "Cette version du site est statique et fonctionne sans serveur : les règles juridiques ne peuvent pas y être modifiées ni enregistrées. Le calculateur utilise les règles vérifiées intégrées lors de la génération du site.",
   "admin.locked.desc": "En production, la modification des règles exige la variable d'environnement ADMIN_TOKEN. Les règles actives restent consultables.",
   "admin.devMode.title": "Mode développement",
   "admin.minwage.desc": "SMIG (par heure, secteurs non agricoles) et SMAG (par jour, secteur agricole). Chaque valeur s'applique uniquement à sa période d'effet : jamais rétroactivement.",

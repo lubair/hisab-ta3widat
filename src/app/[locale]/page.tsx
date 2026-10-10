@@ -1,12 +1,10 @@
-import { connection } from "next/server";
 import { Suspense } from "react";
 import { AppHeader } from "@/components/app-header";
 import { Calculator } from "@/components/calculator/calculator";
-import { getActiveRuleSet } from "@/lib/server/rules-store";
+import { loadRuleSetForRender } from "@/lib/server/render-rules";
 
 async function CalculatorWithRules() {
-  await connection();
-  const ruleSet = await getActiveRuleSet();
+  const ruleSet = await loadRuleSetForRender();
   return <Calculator ruleSet={ruleSet} />;
 }
 

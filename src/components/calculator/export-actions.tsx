@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useI18n } from "@/components/i18n-provider";
+import { BASE_PATH } from "@/lib/deployment";
 import type { Locale } from "@/lib/i18n";
 import { buildReportModel } from "@/lib/export/report-model";
 import type { LegalRuleSet } from "@/lib/legal/rules/schema";
@@ -46,7 +47,7 @@ export function ExportActions({
     setBusy("pdf");
     try {
       const { generatePdfBlob } = await import("@/lib/export/pdf-report");
-      const blob = await generatePdfBlob(buildReportModel(result, input, ruleSet, reportLocale), window.location.origin);
+      const blob = await generatePdfBlob(buildReportModel(result, input, ruleSet, reportLocale), `${window.location.origin}${BASE_PATH}`);
       download(blob, `${reportLocale === "ar" ? "taqrir-taawidat" : "rapport-indemnites"}-${fileStamp(result)}.pdf`);
     } catch (e) {
       console.error(e);

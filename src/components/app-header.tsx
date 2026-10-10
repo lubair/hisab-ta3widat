@@ -4,6 +4,7 @@ import { Languages, Scale, Settings2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useI18n } from "@/components/i18n-provider";
+import { IS_STATIC_EXPORT } from "@/lib/deployment";
 import { cn } from "@/lib/utils";
 
 export function AppHeader() {
@@ -26,15 +27,17 @@ export function AppHeader() {
           </span>
         </Link>
         <nav className="ms-auto flex shrink-0 items-center gap-1 print:hidden" aria-label="Navigation">
-          <Link
-            href={onAdmin ? `/${locale}` : `/${locale}/admin`}
-            className={cn(
-              "inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-            )}
-          >
-            <Settings2 className="size-4" aria-hidden />
-            <span className="hidden sm:inline">{onAdmin ? t("nav.calculator") : t("nav.admin")}</span>
-          </Link>
+          {IS_STATIC_EXPORT && !onAdmin ? null : (
+            <Link
+              href={onAdmin ? `/${locale}` : `/${locale}/admin`}
+              className={cn(
+                "inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+              )}
+            >
+              <Settings2 className="size-4" aria-hidden />
+              <span className="hidden sm:inline">{onAdmin ? t("nav.calculator") : t("nav.admin")}</span>
+            </Link>
+          )}
           <Link
             href={switchHref}
             hrefLang={other}

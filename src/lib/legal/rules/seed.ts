@@ -8,7 +8,7 @@ import type { AnyRuleEntry, LegalProvision, LegalRuleSet, MinimumWageEntry, Noti
  */
 
 export const SOURCES = {
-  laborCode: "https://www.sgg.gov.ma/Portals/0/lois/Code_du_travail.pdf",
+  laborCode: "https://www.sgg.gov.ma/BulletinOfficiel.aspx",
   laborCodeBo: "BO n° 5210 du 6 mai 2004 (éd. française) — Dahir n° 1-03-194 du 11 septembre 2003",
   noticeDecree: "https://www.sgg.gov.ma/BulletinOfficiel.aspx",
   law1912: "https://www.sgg.gov.ma/BulletinOfficiel.aspx",
@@ -27,13 +27,17 @@ function smag(id: string, amount: string, validFrom: string, validTo: string | n
   return { id, sector: "agricultural", unit: "day", amount, validFrom, validTo, decree, officialUrl: SOURCES.bo, verification: "corroborated", ...extra };
 }
 
+/** The amounts are corroborated; the number of the 2022 implementing decree could not be confirmed. */
+const DECREE_2022 = "Décret d'application de l'accord social du 30 avril 2022 (numéro à confirmer au BO)";
+const REVIEW_DECREE_NUMBER: Partial<MinimumWageEntry> = { verification: "requires_legal_review" };
+
 export const MINIMUM_WAGES: MinimumWageEntry[] = [
   smig("smig-2014", "12.85", "2014-07-01", "2015-06-30", "Décret n° 2.14.343", { bulletinOfficiel: "BO n° 6272 du 10 juillet 2014" }),
   smig("smig-2015", "13.46", "2015-07-01", "2019-06-30", "Décret n° 2.14.343", { bulletinOfficiel: "BO n° 6272 du 10 juillet 2014" }),
   smig("smig-2019", "14.13", "2019-07-01", "2020-06-30", "Décret n° 2.19.424", { bulletinOfficiel: "BO du 27 juin 2019" }),
   smig("smig-2020", "14.81", "2020-07-01", "2022-08-31", "Décret n° 2.19.424", { bulletinOfficiel: "BO du 27 juin 2019" }),
-  smig("smig-2022", "15.55", "2022-09-01", "2023-08-31", "Décret n° 2.22.692"),
-  smig("smig-2023", "16.29", "2023-09-01", "2024-12-31", "Décret n° 2.22.692"),
+  smig("smig-2022", "15.55", "2022-09-01", "2023-08-31", DECREE_2022, REVIEW_DECREE_NUMBER),
+  smig("smig-2023", "16.29", "2023-09-01", "2024-12-31", DECREE_2022, REVIEW_DECREE_NUMBER),
   smig("smig-2025", "17.10", "2025-01-01", "2025-12-31", "Décret n° 2.24.1122"),
   smig("smig-2026", "17.92", "2026-01-01", null, "Décret n° 2.25.983 du 29 décembre 2025"),
 
@@ -41,8 +45,8 @@ export const MINIMUM_WAGES: MinimumWageEntry[] = [
   smag("smag-2015", "69.73", "2015-07-01", "2019-06-30", "Décret n° 2.14.343", { bulletinOfficiel: "BO n° 6272 du 10 juillet 2014" }),
   smag("smag-2019", "73.22", "2019-07-01", "2020-06-30", "Décret n° 2.19.424", { bulletinOfficiel: "BO du 27 juin 2019" }),
   smag("smag-2020", "76.70", "2020-07-01", "2022-08-31", "Décret n° 2.19.424", { bulletinOfficiel: "BO du 27 juin 2019" }),
-  smag("smag-2022", "84.37", "2022-09-01", "2023-08-31", "Décret n° 2.22.692"),
-  smag("smag-2023", "88.58", "2023-09-01", "2025-03-31", "Décret n° 2.22.692"),
+  smag("smag-2022", "84.37", "2022-09-01", "2023-08-31", DECREE_2022, REVIEW_DECREE_NUMBER),
+  smag("smag-2023", "88.58", "2023-09-01", "2025-03-31", DECREE_2022, REVIEW_DECREE_NUMBER),
   smag("smag-2025", "93.00", "2025-04-01", "2026-03-31", "Décret n° 2.24.1122"),
   smag("smag-2026", "97.44", "2026-04-01", null, "Décret n° 2.25.983 du 29 décembre 2025"),
 ];
@@ -297,7 +301,10 @@ export const RULES: AnyRuleEntry[] = [
     validTo: null,
     provisionIds: ["L1912-21"],
     verification: "requires_legal_review",
-    description: { fr: "Salaire minimum des travailleurs domestiques : 60 % du SMIG.", ar: "الحد الأدنى لأجر العمال المنزليين: 60% من الحد الأدنى للأجر." },
+    description: {
+      fr: "Salaire minimum des travailleurs domestiques : 60 % du SMIG (loi 19-12). Un relèvement ultérieur de ce taux par décret doit être saisi ici après vérification au BO.",
+      ar: "الحد الأدنى لأجر العمال المنزليين: 60% من الحد الأدنى للأجر (القانون 19.12). أي رفع لاحق لهذه النسبة بمرسوم يجب إدخاله هنا بعد التحقق منه في الجريدة الرسمية.",
+    },
   },
   {
     id: "suspension-2004",
@@ -326,13 +333,22 @@ export const RULES: AnyRuleEntry[] = [
 
 /* ------------------------------------------------------------------ paid holidays */
 
-function holiday(id: string, fr: string, ar: string, kind: "civil" | "religious", fixedDate?: string, validFrom = LC_FROM): PaidHoliday {
-  return { id, name: { fr, ar }, kind, fixedDate, validFrom, validTo: null, source: "Décret relatif aux jours de fête payés", verification: "corroborated" };
+function holiday(
+  id: string,
+  fr: string,
+  ar: string,
+  kind: "civil" | "religious",
+  fixedDate?: string,
+  validFrom = LC_FROM,
+  verification: PaidHoliday["verification"] = "corroborated",
+): PaidHoliday {
+  return { id, name: { fr, ar }, kind, fixedDate, validFrom, validTo: null, source: "Décret relatif aux jours de fête payés", verification };
 }
 
 export const PAID_HOLIDAYS: PaidHoliday[] = [
   holiday("new-year", "Nouvel an", "فاتح السنة الميلادية", "civil", "01-01"),
   holiday("independence-manifesto", "Manifeste de l'indépendance", "ذكرى تقديم وثيقة الاستقلال", "civil", "01-11"),
+  holiday("amazigh-new-year", "Nouvel an amazigh", "رأس السنة الأمازيغية", "civil", "01-14", "2024-01-01"),
   holiday("labour-day", "Fête du travail", "عيد الشغل", "civil", "05-01"),
   holiday("throne", "Fête du Trône", "عيد العرش", "civil", "07-30"),
   holiday("oued-eddahab", "Allégeance de Oued Eddahab", "ذكرى استرجاع إقليم وادي الذهب", "civil", "08-14"),
@@ -340,10 +356,10 @@ export const PAID_HOLIDAYS: PaidHoliday[] = [
   holiday("youth", "Fête de la Jeunesse", "عيد الشباب", "civil", "08-21"),
   holiday("green-march", "Marche Verte", "ذكرى المسيرة الخضراء", "civil", "11-06"),
   holiday("independence", "Fête de l'Indépendance", "عيد الاستقلال", "civil", "11-18"),
-  holiday("eid-fitr", "Aïd Al Fitr", "عيد الفطر", "religious"),
-  holiday("eid-adha", "Aïd Al Adha", "عيد الأضحى", "religious"),
-  holiday("muharram", "1er Moharrem", "فاتح محرم", "religious"),
-  holiday("mawlid", "Aïd Al Mawlid", "عيد المولد النبوي", "religious"),
+  holiday("eid-fitr", "Aïd Al Fitr", "عيد الفطر", "religious", undefined, LC_FROM, "requires_legal_review"),
+  holiday("eid-adha", "Aïd Al Adha", "عيد الأضحى", "religious", undefined, LC_FROM, "requires_legal_review"),
+  holiday("muharram", "1er Moharrem", "فاتح محرم", "religious", undefined, LC_FROM, "requires_legal_review"),
+  holiday("mawlid", "Aïd Al Mawlid", "عيد المولد النبوي", "religious", undefined, LC_FROM, "requires_legal_review"),
 ];
 
 export const SEED_RULESET: LegalRuleSet = {

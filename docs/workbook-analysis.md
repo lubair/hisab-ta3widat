@@ -67,7 +67,7 @@ The workbook has two sheets:
 
 | # | Problem | Impact |
 |---|---|---|
-| 1 | `DATEDIF(..,"y")+1` adds one year even when service is an exact number of years (5 y 0 m 0 d becomes 6). | Overstates the indemnity, damages and notice tier. |
+| 1 | `DATEDIF(..,"y")+1` adds one year even when service is an exact number of years (5 y 0 m 0 d becomes 6). Counting a *started* year as a full year is correct (Cour de cassation), but an exact number of years must not be increased. | Overstates the indemnity, damages and notice tier for exact anniversaries. |
 | 2 | The 6-month eligibility test uses `DATEDIF(m)+1 < 6`, so 5 months of service already passes. | Pays an indemnity Art. 52 does not grant. |
 | 3 | Notice thresholds use `months + 1`, so exactly 12 months counts as "more than 1 year" and exactly 60 months as "more than 5 years". | Wrong notice tier at the boundaries. |
 | 4 | Every amount is computed for every case: no termination reason, no CDI/CDD distinction, no gross-misconduct test. | Totals include indemnities that are not legally due. |
@@ -75,7 +75,7 @@ The workbook has two sheets:
 | 6 | Gross salary used in full. | Art. 57 excludes expense reimbursements, responsibility, hardship, dangerous-zone and temporary-replacement allowances. |
 | 7 | Notice, leave and holidays valued on **net** salary. | These indemnities replace remuneration and are computed on gross, before withholdings. |
 | 8 | "Net" = gross − 6.74 %. | Ignores income tax, CNSS ceilings and allowance exemptions, so it is not a reliable net. |
-| 9 | ÷26 for a daily wage, ÷191 for the hourly wage, ÷174 / ÷208 picked from a list. | The divisor must follow the employee's actual schedule (hours per week, days per week). |
+| 9 | ÷191 is applied whatever the schedule, and ÷174 / ÷208 are picked from a list (the domestic sheet mixes ÷208 and ÷191). | Art. 238 sets a month at 191 h (non-agricultural), 208 h (agricultural) or 26 days. Hours must be scaled to the actual weekly schedule. The ÷26 day divisor is legally grounded, but it was applied to net salary. |
 | 10 | SMIG hard-coded to 15.55 (Sept 2022) or 14.81 (2020), with no effective dates. | Wrong minimum for any other termination date, including 17.10 (2025) and 17.92 (2026). |
 | 11 | The minimum wage is used as a constant inside calculations. | The legal minimum is a floor for comparison. It must never replace the actual salary. |
 | 12 | Domestic sheet: 60 % × SMIG × 208 then ÷191. | Inconsistent divisors; the 500 MAD example is below the minimum with no warning. |
@@ -83,7 +83,10 @@ The workbook has two sheets:
 | 14 | No deduction of amounts already paid, and no handling of advances. | Risk of double payment. |
 | 15 | Damages (a judge's assessment) are summed with statutory amounts. | Mixes certain entitlements with estimates. |
 | 16 | The category list has only "Cadres" and "Ouvrier". | "Employé" is missing. The decree groups employees with workers for notice purposes. |
-| 17 | Leave accrual ignores the unserved notice period. | Art. 240 treats the notice period as effective work. |
+| 17 | Leave accrual ignores the unserved notice period and the "started month counts in full" rule. | Art. 239 treats the notice period as effective work; Art. 251 counts every started month. |
+| 19 | No floor on the indemnity base. | Art. 56: the reference salary cannot be below the statutory minimum wage. |
+| 20 | 1 January counted among paid holidays. | It is not on the private-sector list (Decree 2-04-426). |
+| 21 | Domestic seniority counted from the hiring date. | Law 19-12 Art. 21 counts effective work only from 2 October 2018. |
 | 18 | Seniority ignores suspensions (unpaid leave, strike…). | Art. 52-53 refer to effective work. |
 
 ## 4. Verified rules that replace the formulas
@@ -92,15 +95,15 @@ Verification statuses and sources are listed in [legal-verification.md](legal-ve
 
 | Topic | Rule implemented | Reference |
 |---|---|---|
-| Seniority | Calendar Y/M/D from start to last day (inclusive). Non-assimilated suspensions are deducted. No blanket rounding: a fraction counts pro rata by default. The "fraction = full year" reading is an option and is flagged. | Art. 52-53 |
+| Seniority | Calendar Y/M/D from start to last day (inclusive). Non-assimilated suspensions are deducted (Art. 54). A started year counts as a full year, following the Cour de cassation (2017, 2023). An exact number of years is never rounded up. Prorata is an option and is flagged. | Art. 52-54 |
 | Eligibility | Indemnity only for CDI (or a CDD the user asserts would be requalified), ≥ 6 months of effective work, and not gross misconduct, resignation or mutual agreement. | Art. 52, 39, 61 |
 | Dismissal indemnity | 96 h × years 0-5, 144 h × 5-10, 192 h × 10-15, 240 h beyond, × hourly reference. | Art. 53 |
-| Reference salary | Average of the Art. 57 elements over the 12 months (52 weeks) before termination; the current month if no history is given (flagged). Hourly = monthly / (weekly hours × 191/44). | Art. 55, 57 |
+| Reference salary | Average of the Art. 57 elements over the 12 months (52 weeks) before termination; the current month if no history is given (flagged). Hourly = monthly / (weekly hours × 191/44). Never below the SMIG/SMAG in force (Art. 56). Representatives get +100 % (Art. 58). | Art. 55-58 |
 | Damages | min(years × 1.5, 36) × monthly salary; unfair dismissal only (including resignation caused by the employer's gross misconduct, Art. 40). Shown as a **judicial estimate**. | Art. 41 |
-| Notice | Executives 1 / 2 / 3 months; employees and workers 8 days / 1 / 2 months. Thresholds are "< 1 year", "1 to 5 years" (inclusive) and "> 5 years". Only the unserved part is owed, on gross remuneration. | Art. 43, 51; Decree 2.04.469 |
-| Paid leave | 1.5 days/month (2 days under 18), + 1.5 days per full 5-year period, capped at 30 days. The unserved notice period counts. Days taken and days carried over are applied. Daily value = monthly remuneration / working days per month from the actual schedule. | Art. 231, 232, 240 |
+| Notice | Executives 1 / 2 / 3 months; employees and workers 8 days / 1 / 2 months. Exactly 5 years gives employees and workers 2 months (Arabic text "5 years or more"; flagged). Only the unserved part is owed, on gross remuneration; days are valued at monthly / 26. | Art. 43, 51; Decree 2-04-469; Art. 238 |
+| Paid leave | 1.5 days/month (2 days under 18), + 1.5 days per full 5-year period, capped at 30 days. The unserved notice period counts. Every started month counts after 6 months of service; below 6 months, only complete months count. Days taken and carried over are applied. Daily value = monthly remuneration / 26. | Art. 231, 232, 238, 239, 251, 252 |
 | CDD | Early termination: salaries remaining until the planned term. No CDI indemnities unless the user requests requalification. | Art. 33, 16 |
-| Domestic workers | Separate rules: 1 year minimum, same hourly scale, no Art. 41 damages, minimum wage 60 % of SMIG. Notice is not computed because no verified duration exists. All of these are flagged for legal review. | Law 19-12 |
+| Domestic workers | Separate rules: 1 year of continuous effective work counted from 2018-10-02, same hourly scale, minimum wage 60 % of SMIG, leave 1.5 days/month with no seniority supplement. The law has no notice and no Art. 41 damages, so none are computed. Gross misconduct exclusion is flagged (the law is silent). | Law 19-12 Art. 13, 16, 19, 21 |
 | Minimum wage | Historical SMIG/SMAG table with effective dates and decrees. Comparison only, never retroactive, never substituted for the salary. | Art. 345; decrees |
 | Other entitlements | Unpaid wages, overtime (+25/50/100 %), holidays, bonuses and other items, reported separately. Advances reduce the net payable only. | Art. 201, 217 |
 

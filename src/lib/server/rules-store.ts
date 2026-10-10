@@ -21,7 +21,7 @@ export interface RulesStore {
 
 export type VersionMeta = Omit<RuleSetVersion, "ruleSet"> & { rulesVersion: string };
 
-const STORE_PATH = process.env.RULES_STORE_PATH || path.join(process.cwd(), "data", "rules-store.json");
+const STORE_PATH = process.env.RULES_STORE_PATH || path.join(/*turbopackIgnore: true*/ process.cwd(), "data", "rules-store.json");
 
 function seedStore(): RulesStore {
   const id = "seed";
@@ -42,7 +42,7 @@ function seedStore(): RulesStore {
 
 async function readStore(): Promise<RulesStore> {
   try {
-    const raw = await readFile(STORE_PATH, "utf-8");
+    const raw = await readFile(/*turbopackIgnore: true*/ STORE_PATH, "utf-8");
     const parsed = JSON.parse(raw) as RulesStore;
     if (!parsed.versions?.length) return seedStore();
     return parsed;
@@ -53,10 +53,10 @@ async function readStore(): Promise<RulesStore> {
 
 /** Atomic write: temp file then rename, so a crash never leaves a truncated store. */
 async function writeStore(store: RulesStore): Promise<void> {
-  await mkdir(path.dirname(STORE_PATH), { recursive: true });
+  await mkdir(/*turbopackIgnore: true*/ path.dirname(STORE_PATH), { recursive: true });
   const tmp = `${STORE_PATH}.${randomUUID()}.tmp`;
-  await writeFile(tmp, JSON.stringify(store, null, 2), "utf-8");
-  await rename(tmp, STORE_PATH);
+  await writeFile(/*turbopackIgnore: true*/ tmp, JSON.stringify(store, null, 2), "utf-8");
+  await rename(/*turbopackIgnore: true*/ tmp, /*turbopackIgnore: true*/ STORE_PATH);
 }
 
 export async function getActiveRuleSet(): Promise<LegalRuleSet> {

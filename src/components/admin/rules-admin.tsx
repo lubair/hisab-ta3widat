@@ -367,7 +367,7 @@ export function RulesAdmin({ initialRuleSet, initialVersions, initialActiveId, d
                 <CardDescription>{t("admin.minwage.desc")}</CardDescription>
               </CardHeader>
               <CardContent className="overflow-x-auto">
-                <Table className="min-w-[1100px] text-xs">
+                <Table className="w-max min-w-full text-xs">
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-36">{t("admin.minwage.sector")}</TableHead>
@@ -385,13 +385,13 @@ export function RulesAdmin({ initialRuleSet, initialVersions, initialActiveId, d
                     {draft.minimumWages.map((w, i) => (
                       <TableRow key={w.id} className={cn("align-top", rowHasIssue(`minimumWages[${i}].`) && "bg-destructive/5")}>
                         <TableCell>
-                          <MiniSelect label={t("admin.minwage.sector")} value={w.sector} options={sectorOptions} onChange={(v) => updateWage(i, { sector: v })} />
+                          <MiniSelect label={t("admin.minwage.sector")} value={w.sector} options={sectorOptions} onChange={(v) => updateWage(i, { sector: v })} className="w-44" />
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1" dir="ltr">
                             <Input
                               inputMode="decimal"
-                              className="h-8 text-xs tabular"
+                              className="h-8 w-24 text-xs tabular"
                               value={w.amount}
                               aria-label={t("admin.minwage.amount")}
                               aria-invalid={isInvalid(`minimumWages[${i}].amount`)}
@@ -401,20 +401,20 @@ export function RulesAdmin({ initialRuleSet, initialVersions, initialActiveId, d
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Input type="date" className="h-8 text-xs" value={w.validFrom} aria-label={t("admin.minwage.from")} aria-invalid={isInvalid(`minimumWages[${i}].validFrom`)} onChange={(e) => updateWage(i, { validFrom: e.target.value })} />
+                          <Input type="date" className="h-8 w-36 text-xs" value={w.validFrom} aria-label={t("admin.minwage.from")} aria-invalid={isInvalid(`minimumWages[${i}].validFrom`)} onChange={(e) => updateWage(i, { validFrom: e.target.value })} />
                         </TableCell>
                         <TableCell>
-                          <Input type="date" className="h-8 text-xs" value={w.validTo ?? ""} aria-label={t("admin.minwage.to")} aria-invalid={isInvalid(`minimumWages[${i}].validTo`)} onChange={(e) => updateWage(i, { validTo: e.target.value || null })} />
+                          <Input type="date" className="h-8 w-36 text-xs" value={w.validTo ?? ""} aria-label={t("admin.minwage.to")} aria-invalid={isInvalid(`minimumWages[${i}].validTo`)} onChange={(e) => updateWage(i, { validTo: e.target.value || null })} />
                         </TableCell>
                         <TableCell>
-                          <Input className="h-8 text-xs" value={w.decree} aria-label={t("admin.minwage.decree")} aria-invalid={isInvalid(`minimumWages[${i}].decree`)} onChange={(e) => updateWage(i, { decree: e.target.value })} />
+                          <Input className="h-8 w-72 text-xs" value={w.decree} aria-label={t("admin.minwage.decree")} aria-invalid={isInvalid(`minimumWages[${i}].decree`)} onChange={(e) => updateWage(i, { decree: e.target.value })} />
                         </TableCell>
                         <TableCell>
-                          <Input className="h-8 text-xs" value={w.bulletinOfficiel ?? ""} aria-label={t("admin.minwage.bo")} onChange={(e) => updateWage(i, { bulletinOfficiel: e.target.value || undefined })} />
+                          <Input className="h-8 w-60 text-xs" value={w.bulletinOfficiel ?? ""} aria-label={t("admin.minwage.bo")} onChange={(e) => updateWage(i, { bulletinOfficiel: e.target.value || undefined })} />
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
-                            <Input dir="ltr" className="h-8 text-xs" value={w.officialUrl} aria-label={t("admin.minwage.url")} aria-invalid={isInvalid(`minimumWages[${i}].officialUrl`)} onChange={(e) => updateWage(i, { officialUrl: e.target.value.trim() })} />
+                            <Input dir="ltr" className="h-8 w-64 text-xs" value={w.officialUrl} aria-label={t("admin.minwage.url")} aria-invalid={isInvalid(`minimumWages[${i}].officialUrl`)} onChange={(e) => updateWage(i, { officialUrl: e.target.value.trim() })} />
                             {/^https:\/\/\S+$/.test(w.officialUrl) ? (
                               <a href={w.officialUrl} target="_blank" rel="noreferrer noopener" className="text-muted-foreground hover:text-primary" aria-label={t("admin.open")}>
                                 <ExternalLink className="size-3.5" />
@@ -423,7 +423,7 @@ export function RulesAdmin({ initialRuleSet, initialVersions, initialActiveId, d
                           </div>
                         </TableCell>
                         <TableCell>
-                          <MiniSelect label={t("admin.verification")} value={w.verification} options={verificationOptions} onChange={(v) => updateWage(i, { verification: v })} />
+                          <MiniSelect label={t("admin.verification")} value={w.verification} options={verificationOptions} onChange={(v) => updateWage(i, { verification: v })} className="w-52" />
                         </TableCell>
                         <TableCell>
                           <Button
@@ -488,7 +488,7 @@ export function RulesAdmin({ initialRuleSet, initialVersions, initialActiveId, d
                 <CardDescription>{t("admin.provisions.desc")}</CardDescription>
               </CardHeader>
               <CardContent className="overflow-x-auto">
-                <Table className="min-w-[900px] text-xs">
+                <Table className="w-max min-w-full text-xs">
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-28">{t("admin.provision.id")}</TableHead>
@@ -504,14 +504,14 @@ export function RulesAdmin({ initialRuleSet, initialVersions, initialActiveId, d
                         <TableCell>
                           <code dir="ltr">{p.id}</code>
                         </TableCell>
-                        <TableCell className="whitespace-normal">
+                        <TableCell className="min-w-80 max-w-md whitespace-normal">
                           <span className="font-medium">{p.title[locale]}</span>
                           <span className="mt-0.5 block text-muted-foreground">{p.summary[locale]}</span>
                         </TableCell>
                         <TableCell>
                           <Input
                             type="date"
-                            className="h-8 text-xs"
+                            className="h-8 w-36 text-xs"
                             value={p.validFrom}
                             aria-label={t("admin.minwage.from")}
                             onChange={(e) => setDraft((d) => ({ ...d, provisions: d.provisions.map((x, j) => (j === i ? { ...x, validFrom: e.target.value } : x)) }))}
@@ -520,7 +520,7 @@ export function RulesAdmin({ initialRuleSet, initialVersions, initialActiveId, d
                         <TableCell>
                           <Input
                             dir="ltr"
-                            className="h-8 text-xs"
+                            className="h-8 w-72 text-xs"
                             value={p.officialUrl}
                             aria-label={t("admin.minwage.url")}
                             aria-invalid={isInvalid(`provisions.${p.id}.officialUrl`)}
@@ -529,6 +529,7 @@ export function RulesAdmin({ initialRuleSet, initialVersions, initialActiveId, d
                         </TableCell>
                         <TableCell>
                           <MiniSelect
+                            className="w-52"
                             label={t("admin.verification")}
                             value={p.verification}
                             options={verificationOptions}

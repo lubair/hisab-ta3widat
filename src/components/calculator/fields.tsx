@@ -51,7 +51,7 @@ export function NumberField({ label, value, onChange, help, suffix, placeholder,
   const id = useId();
   return (
     <Field label={label} help={help} htmlFor={id} className={className}>
-      <div className="relative">
+      <div className="relative" dir="ltr">
         <Input
           id={id}
           inputMode="decimal"

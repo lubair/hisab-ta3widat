@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const isGitHubPages = process.env.GITHUB_PAGES === "true";
-const basePath = isGitHubPages ? "/moroccan-employment-compensation" : "";
+const basePath = isGitHubPages ? "/hisab-ta3widat" : "";
 
 const nextConfig: NextConfig = {
   env: {

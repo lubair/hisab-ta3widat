@@ -129,14 +129,14 @@ ADMIN_TOKEN=… RULES_STORE_PATH=/var/lib/indemnites/rules-store.json npm start
 ### GitHub Pages (static, read-only)
 
 `.github/workflows/deploy.yml` type-checks, tests, and publishes a static export
-to <https://lubair.github.io/moroccan-employment-compensation/> on every push
-to `main`. In the repository settings, set **Pages → Source** to
+to <https://lubair.github.io/hisab-ta3widat/> on every push to `main`
+(repository: <https://github.com/lubair/hisab-ta3widat>). In the repository settings, set **Pages → Source** to
 **GitHub Actions**.
 
 To reproduce the build locally:
 
 ```bash
-GITHUB_PAGES=true npm run build   # writes ./out with base path /moroccan-employment-compensation
+GITHUB_PAGES=true npm run build   # writes ./out with base path /hisab-ta3widat
 ```
 
 Differences from the server deployment:

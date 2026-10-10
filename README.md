@@ -80,8 +80,8 @@ docs/                   workbook analysis and legal verification status
 
 Values that could not be confirmed against an official text are marked
 **requires legal review**. They are flagged on every result that uses them.
-The domestic-worker notice period is intentionally left empty, so no amount
-is invented for it. Damages for unfair dismissal are set by a court and are
+Law 19-12 contains no notice period and no Art. 41
+damages, so none are computed for domestic workers. Damages for unfair dismissal are set by a court and are
 reported as an estimate, separately from statutory amounts.
 
 This tool provides an estimate. It does not replace advice from a lawyer or

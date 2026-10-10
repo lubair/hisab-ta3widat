@@ -22,6 +22,13 @@ export function computeSeniority(input: CalculationInput, ruleSet: LegalRuleSet,
   const actual = serviceYMD(input.startDate, input.endDate);
   const actualDays = inclusiveDays(input.startDate, input.endDate);
 
+  // Law 19-12 art. 21: effective work only counts from the law's entry into force.
+  const domesticFrom = resolveRule(ruleSet, "regime.availability", legalDate)?.value.domesticFrom;
+  const countFrom =
+    input.regime === "domestic" && domesticFrom && compareDates(input.startDate, domesticFrom) < 0 ? domesticFrom : input.startDate;
+  if (countFrom !== input.startDate) warnings.push(msg("warn.domestic_seniority_from_law", { date: countFrom }));
+  const countedDays = compareDates(input.endDate, countFrom) >= 0 ? inclusiveDays(countFrom, input.endDate) : 0;
+
   const assimilation = resolveRule(ruleSet, "seniority.suspension_assimilation", legalDate)?.value;
   const suspensionDetails: SeniorityResult["suspensionDetails"] = [];
   let excluded = 0;
@@ -30,15 +37,16 @@ export function computeSeniority(input: CalculationInput, ruleSet: LegalRuleSet,
       warnings.push(msg("warn.suspension_invalid"));
       continue;
     }
-    const days = overlapDays(period.from, period.to, input.startDate, input.endDate);
+    const days = countedDays > 0 ? overlapDays(period.from, period.to, countFrom, input.endDate) : 0;
     const counted = period.countsAsEffectiveWork ?? assimilation?.[period.type] ?? false;
     suspensionDetails.push({ period, days, counted });
     if (!counted) excluded += days;
   }
-  excluded = Math.min(excluded, actualDays);
+  excluded = Math.min(excluded, countedDays);
 
-  const effective = excluded > 0 ? serviceYMD(input.startDate, addDays(input.endDate, -excluded)) : actual;
-  if (excluded >= actualDays) {
+  const effective =
+    countedDays === 0 ? { years: 0, months: 0, days: 0 } : serviceYMD(countFrom, addDays(input.endDate, -excluded));
+  if (excluded >= countedDays) {
     effective.years = 0;
     effective.months = 0;
     effective.days = 0;

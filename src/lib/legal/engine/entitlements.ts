@@ -1,7 +1,7 @@
 import { addDays, compareDates, serviceYMD, type ISODate, type YMD } from "../dates";
 import { D, dec, minDec, nonNegative, sum, type Dec } from "../decimal";
 import type { LegalRuleSet, NoticeTier, ScaleBracket } from "../rules/schema";
-import { requireRule, resolveRule } from "../rules/resolve";
+import { requireRule, resolveMinimumWage, resolveRule } from "../rules/resolve";
 import type { CalcStep, CalculationInput, Entitlement, Message, SeniorityBreakdown } from "../types";
 import { finalize, notApplicable, statusFlag } from "./entitlement-builder";
 import { decimalMonths, hasFraction, msg, n, scaleYears } from "./helpers";
@@ -78,13 +78,13 @@ export function dismissalIndemnity(ctx: EngineContext): Entitlement {
   const { input } = ctx;
   const domestic = input.regime === "domestic";
   const rule = applyRule(ctx, domestic ? "dismissal.domestic" : "dismissal.labor_code");
-  const provisionIds = domestic ? ["L1912-21", "L1912-22"] : ["CT-52", "CT-53", "CT-55", "CT-57"];
+  const provisionIds = domestic ? ["L1912-21"] : ["CT-52", "CT-53", "CT-54", "CT-55", "CT-56", "CT-57"];
 
   const reasons: Message[] = [];
   if (!ctx.treatAsCdi) reasons.push(msg("na.dismissal.cdd"));
   switch (input.terminationReason) {
     case "gross_misconduct":
-      reasons.push(msg("na.dismissal.gross_misconduct"));
+      reasons.push(msg(domestic ? "na.dismissal.gross_misconduct_domestic" : "na.dismissal.gross_misconduct"));
       break;
     case "resignation":
       reasons.push(msg("na.dismissal.resignation"));
@@ -103,10 +103,21 @@ export function dismissalIndemnity(ctx: EngineContext): Entitlement {
 
   const method = input.options.dismissalPartialYear ?? rule.value.defaultPartialYear;
   const years = scaleYears(ctx.seniority.effective, method);
-  const hourly = ctx.salary.hourlyArt57;
+
+  // Art. 56: the reference salary cannot fall below the statutory minimum wage in force.
+  let floorHourly: Dec | null = null;
+  if (rule.value.minimumWageFloor) {
+    const mw = resolveMinimumWage(ctx.ruleSet, input.sector, ctx.legalDate);
+    if (mw) floorHourly = mw.unit === "day" ? dec(mw.amount).div(8) : dec(mw.amount);
+  }
+  const floorApplied = floorHourly !== null && floorHourly.gt(ctx.salary.hourlyArt57);
+  const hourly = floorApplied && floorHourly ? floorHourly : ctx.salary.hourlyArt57;
+
   const alloc = allocateBrackets(years, rule.value.brackets, hourly);
   const totalHours = sum(alloc.map((a) => a.hours));
-  const total = sum(alloc.map((a) => a.amount));
+  const scaleTotal = sum(alloc.map((a) => a.amount));
+  const multiplier = input.employeeRepresentative && !domestic ? dec(rule.value.representativeMultiplier) : new D(1);
+  const total = scaleTotal.times(multiplier);
 
   const steps: CalcStep[] = [
     {
@@ -120,9 +131,19 @@ export function dismissalIndemnity(ctx: EngineContext): Entitlement {
     {
       label: msg("step.hourly_reference"),
       formula: `${n(ctx.salary.art57Average)} / ${n(ctx.salary.monthlyHours)}`,
-      result: n(hourly, 4),
+      result: n(ctx.salary.hourlyArt57, 4),
       unit: "MAD/h",
     },
+    ...(floorHourly
+      ? [
+          {
+            label: msg("step.art56_floor"),
+            formula: `max(${n(ctx.salary.hourlyArt57, 4)} ; ${n(floorHourly, 4)})`,
+            result: n(hourly, 4),
+            unit: "MAD/h" as const,
+          },
+        ]
+      : []),
     {
       label: msg(method === "prorata" ? "step.years_prorata" : "step.years_full"),
       formula:
@@ -138,10 +159,14 @@ export function dismissalIndemnity(ctx: EngineContext): Entitlement {
       result: n(a.amount),
       unit: "MAD" as const,
     })),
+    ...(multiplier.gt(1)
+      ? [{ label: msg("step.representative"), formula: `${n(scaleTotal)} × ${n(multiplier)}`, result: n(total), unit: "MAD" as const }]
+      : []),
   ];
 
   const reviewFlags: Message[] = [...statusFlag(rule.verification, rule.id), ...requalificationFlag(ctx)];
-  if (method === "full_year") reviewFlags.push(msg("flag.full_year_interpretation"));
+  if (method === "prorata") reviewFlags.push(msg("flag.prorata_interpretation"));
+  if (domestic && input.employeeRepresentative) reviewFlags.push(msg("flag.representative_domestic"));
   if (!input.useSalaryHistory || ctx.salary.historyIncluded.length === 0) reviewFlags.push(msg("flag.no_history"));
 
   return finalize(
@@ -149,7 +174,10 @@ export function dismissalIndemnity(ctx: EngineContext): Entitlement {
       id,
       nature: "statutory",
       method: msg("method.dismissal_indemnity"),
-      formula: alloc.map((a) => `${n(a.years, 4)}×${a.hoursPerYear}h`).join(" + ") + ` = ${n(totalHours, 2)} h × ${n(hourly, 4)} MAD/h`,
+      formula:
+        alloc.map((a) => `${n(a.years, 4)}×${a.hoursPerYear}h`).join(" + ") +
+        ` = ${n(totalHours, 2)} h × ${n(hourly, 4)} MAD/h` +
+        (multiplier.gt(1) ? ` × ${n(multiplier)}` : ""),
       inputs: [
         { label: msg("input.effective_seniority"), value: `${ctx.seniority.effective.years}/${ctx.seniority.effective.months}/${ctx.seniority.effective.days}`, unit: "text" },
         { label: msg("input.years_applied"), value: n(years, 4), unit: "years" },
@@ -160,9 +188,14 @@ export function dismissalIndemnity(ctx: EngineContext): Entitlement {
       ],
       steps,
       caps: [],
-      notes: [msg(method === "prorata" ? "note.prorata" : "note.full_year")],
+      notes: [
+        msg(method === "prorata" ? "note.prorata" : "note.full_year"),
+        ...(floorApplied ? [msg("note.art56_floor_applied")] : []),
+        ...(multiplier.gt(1) ? [msg("note.representative", { multiplier: n(multiplier) })] : []),
+        ...(domestic ? [msg("note.domestic_seniority_scope")] : []),
+      ],
       reasonsNotApplicable: [],
-      provisionIds,
+      provisionIds: multiplier.gt(1) ? [...provisionIds, "CT-58"] : provisionIds,
       reviewFlags,
     },
     total,
@@ -177,7 +210,7 @@ export function dismissalIndemnity(ctx: EngineContext): Entitlement {
 export function unfairDismissalDamages(ctx: EngineContext): Entitlement {
   const id = "unfair_dismissal_damages" as const;
   const { input } = ctx;
-  const provisionIds = ["CT-41", "CT-40"];
+  const provisionIds = ["CT-41", "CT-40", "CT-59"];
 
   if (input.regime === "domestic") {
     return notApplicable(id, [msg("na.damages.domestic")], ["L1912-21"], "judicial_estimate");
@@ -213,7 +246,7 @@ export function unfairDismissalDamages(ctx: EngineContext): Entitlement {
   const total = months.times(salary);
 
   const reviewFlags: Message[] = [msg("flag.judicial_assessment"), ...statusFlag(rule.verification, rule.id), ...requalificationFlag(ctx)];
-  if (method === "full_year") reviewFlags.push(msg("flag.full_year_interpretation"));
+  if (method === "prorata") reviewFlags.push(msg("flag.prorata_interpretation"));
 
   return finalize(
     {
@@ -329,6 +362,9 @@ export function noticeIndemnity(ctx: EngineContext): { entitlement: Entitlement;
   const rule = domestic ? resolveRule(ctx.ruleSet, "notice.domestic", ctx.legalDate) : resolveRule(ctx.ruleSet, "notice.labor_code", ctx.legalDate);
   const reviewFlags: Message[] = [...(rule ? statusFlag(rule.verification, rule.id) : []), ...requalificationFlag(ctx)];
   if (tier.unit === "days") reviewFlags.push(msg("flag.notice_days_working_days"));
+  if (!domestic && input.category !== "executive" && compareSeniorityToYears(ctx.seniority.effective, 5) === 0) {
+    reviewFlags.push(msg("flag.notice_5y_boundary", { category: input.category }));
+  }
 
   const steps: CalcStep[] = [
     {
@@ -402,7 +438,7 @@ export function paidLeave(ctx: EngineContext, noticeUnservedMonths: Dec): Entitl
   const id = "paid_leave" as const;
   const { input } = ctx;
   const domestic = input.regime === "domestic";
-  const provisionIds = domestic ? ["L1912-leave"] : ["CT-231", "CT-232", "CT-240", "CT-251"];
+  const provisionIds = domestic ? ["L1912-16"] : ["CT-231", "CT-232", "CT-238", "CT-239", "CT-251", "CT-252", "CT-254"];
   const s = ctx.salary;
 
   let daysPerMonth: Dec;
@@ -417,7 +453,10 @@ export function paidLeave(ctx: EngineContext, noticeUnservedMonths: Dec): Entitl
     ? input.leave.referencePeriodStart
     : defaultLeaveReferenceStart(input.startDate, input.endDate);
   const periodYmd = compareDates(input.endDate, refStart) >= 0 ? serviceYMD(refStart, input.endDate) : { years: 0, months: 0, days: 0 };
-  const periodMonths = decimalMonths(periodYmd).plus(noticeUnservedMonths);
+  const rawPeriodMonths = decimalMonths(periodYmd).plus(noticeUnservedMonths);
+  const totalServiceMonths = effectiveTotalMonths(ctx.seniority);
+  let periodMonths = rawPeriodMonths;
+  let monthRounding: Message | null = null;
 
   if (domestic) {
     const rule = applyRule(ctx, "paid_leave.domestic");
@@ -431,6 +470,17 @@ export function paidLeave(ctx: EngineContext, noticeUnservedMonths: Dec): Entitl
     minServiceMonths = rule.value.minServiceMonths;
     ruleId = rule.id;
     verification = rule.verification;
+    if (rule.value.startedMonthCountsAsFull) {
+      // Art. 251: after the minimum service, every started month counts in full.
+      // Art. 252: below it, only complete months count.
+      if (totalServiceMonths.gte(minServiceMonths)) {
+        periodMonths = rawPeriodMonths.ceil();
+        monthRounding = msg("note.leave_started_month", { raw: n(rawPeriodMonths, 4), months: n(periodMonths) });
+      } else {
+        periodMonths = rawPeriodMonths.floor();
+        monthRounding = msg("note.leave_full_months_only", { raw: n(rawPeriodMonths, 4), months: n(periodMonths), min: minServiceMonths });
+      }
+    }
     const fullPeriods = Math.floor(ctx.seniority.effective.years / rule.value.seniorityBonusEveryYears);
     const annualBonus = dec(rule.value.seniorityBonusDays).times(fullPeriods);
     const annualBase = daysPerMonth.times(12);
@@ -458,9 +508,9 @@ export function paidLeave(ctx: EngineContext, noticeUnservedMonths: Dec): Entitl
 
   const notes: Message[] = [msg("note.leave_daily_divisor", { days: n(s.workingDaysPerMonth, 2) })];
   if (noticeUnservedMonths.gt(0)) notes.push(msg("note.leave_notice_period", { months: n(noticeUnservedMonths, 4) }));
+  if (monthRounding) notes.push(monthRounding);
   const reviewFlags: Message[] = [...statusFlag(verification, ruleId)];
-  const totalServiceMonths = effectiveTotalMonths(ctx.seniority);
-  if (totalServiceMonths.lt(minServiceMonths)) reviewFlags.push(msg("flag.leave_under_min_service", { months: minServiceMonths }));
+  if (domestic && totalServiceMonths.lt(minServiceMonths)) reviewFlags.push(msg("flag.leave_under_min_service", { months: minServiceMonths }));
   if (input.terminationReason === "gross_misconduct") notes.push(msg("note.leave_gross_misconduct"));
 
   return finalize(
@@ -611,7 +661,7 @@ export function otherEntitlements(ctx: EngineContext): Entitlement {
       caps: [],
       notes,
       reasonsNotApplicable: [],
-      provisionIds: ["CT-201", "CT-217", "CT-345"],
+      provisionIds: ["CT-201", "CT-217", "CT-356"],
       reviewFlags,
     },
     total,

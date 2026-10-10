@@ -109,14 +109,17 @@ export function computeReferenceSalary(
 
   let monthlyHours: Dec;
   let monthlyHoursMethod: Message;
+  let monthDays: number;
   if (input.regime === "domestic") {
     const wt = requireRule(ruleSet, "working_time.domestic", legalDate).value;
+    monthDays = wt.monthDays;
     monthlyHours = weekly.times(WEEKS_PER_MONTH);
     monthlyHoursMethod = msg("method.hours_weekly_52_12", { weekly: n(weekly), hours: n(monthlyHours) });
     const max = input.employeeUnder18 ? wt.minorWeeklyHours : wt.weeklyHours;
     if (weekly.gt(max)) warnings.push(msg("warn.hours_above_legal", { weekly: n(weekly), max }));
   } else if (input.sector === "agricultural") {
     const wt = requireRule(ruleSet, "working_time.agricultural", legalDate).value;
+    monthDays = wt.monthDays;
     monthlyHours = weekly.times(WEEKS_PER_MONTH);
     monthlyHoursMethod = msg("method.hours_agri", {
       weekly: n(weekly),
@@ -127,6 +130,7 @@ export function computeReferenceSalary(
     if (weekly.gt(wt.weeklyHours)) warnings.push(msg("warn.hours_above_legal", { weekly: n(weekly), max: wt.weeklyHours }));
   } else {
     const wt = requireRule(ruleSet, "working_time.non_agricultural", legalDate).value;
+    monthDays = wt.monthDays;
     monthlyHours = weekly.times(wt.conventionalMonthlyHours).div(wt.weeklyHours);
     monthlyHoursMethod = msg("method.hours_non_agri", {
       weekly: n(weekly),
@@ -143,7 +147,8 @@ export function computeReferenceSalary(
     warnings.push(msg("warn.days_per_week_capped", { days: n(workingDaysPerWeek) }));
     workingDaysPerWeek = new D(6);
   }
-  const workingDaysPerMonth = workingDaysPerWeek.times(WEEKS_PER_MONTH);
+  // Art. 238: one month of work = 26 days of effective work, whatever the weekly schedule.
+  const workingDaysPerMonth = new D(monthDays);
 
   const safeHours = monthlyHours.gt(0) ? monthlyHours : new D(1);
   const safeDays = workingDaysPerMonth.gt(0) ? workingDaysPerMonth : new D(1);

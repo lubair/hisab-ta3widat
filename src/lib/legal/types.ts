@@ -110,6 +110,8 @@ export interface CalculationInput {
   weeklyHours: string;
   dailyHours: string;
   employeeUnder18?: boolean;
+  /** Staff delegate or union representative (Labor Code art. 58). */
+  employeeRepresentative?: boolean;
 
   grossMonthly: string;
   netMonthly?: string;

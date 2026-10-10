@@ -64,12 +64,22 @@ export interface NoticeTier {
   unit: "days" | "months";
 }
 
+export interface DismissalRule {
+  minEffectiveMonths: number;
+  brackets: ScaleBracket[];
+  defaultPartialYear: "prorata" | "full_year";
+  /** Art. 56: the reference salary cannot be lower than the statutory minimum wage. */
+  minimumWageFloor: boolean;
+  /** Art. 58: multiplier for staff delegates and union representatives (decimal string). */
+  representativeMultiplier: string;
+}
+
 export interface RuleValueMap {
-  "working_time.non_agricultural": { weeklyHours: number; annualHours: number; conventionalMonthlyHours: number };
-  "working_time.agricultural": { weeklyHours: number; annualHours: number; conventionalMonthlyHours: number };
-  "working_time.domestic": { weeklyHours: number; minorWeeklyHours: number; conventionalMonthlyHours: number };
-  "dismissal.labor_code": { minEffectiveMonths: number; brackets: ScaleBracket[]; defaultPartialYear: "prorata" | "full_year" };
-  "dismissal.domestic": { minEffectiveMonths: number; brackets: ScaleBracket[]; defaultPartialYear: "prorata" | "full_year" };
+  "working_time.non_agricultural": { weeklyHours: number; annualHours: number; conventionalMonthlyHours: number; monthDays: number };
+  "working_time.agricultural": { weeklyHours: number; annualHours: number; conventionalMonthlyHours: number; monthDays: number };
+  "working_time.domestic": { weeklyHours: number; minorWeeklyHours: number; conventionalMonthlyHours: number; monthDays: number };
+  "dismissal.labor_code": DismissalRule;
+  "dismissal.domestic": DismissalRule;
   "damages.labor_code": { monthsPerYear: string; capMonths: number; defaultPartialYear: "prorata" | "full_year" };
   "notice.labor_code": { executive: NoticeTier[]; employee: NoticeTier[]; worker: NoticeTier[] };
   "notice.domestic": { tiers: NoticeTier[] } | null;
@@ -80,6 +90,8 @@ export interface RuleValueMap {
     seniorityBonusEveryYears: number;
     maxDays: number;
     minServiceMonths: number;
+    /** Art. 251: on termination, a started month counts as a full month (after the minimum service). */
+    startedMonthCountsAsFull: boolean;
   };
   "paid_leave.domestic": { daysPerMonth: string; minServiceMonths: number };
   "overtime.rates": { rate25: string; rate50: string; rate100: string };

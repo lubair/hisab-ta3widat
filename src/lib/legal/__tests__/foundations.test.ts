@@ -49,7 +49,26 @@ describe("legal rule set", () => {
     expect(validateRuleSet(broken).some((i) => /overlap/i.test(i.message))).toBe(true);
   });
 
+  it("cites the identified decrees and excludes 1 January from private-sector holidays", () => {
+    expect(resolveMinimumWage(SEED_RULESET, "non_agricultural", "2022-10-01")?.decree).toContain("2-22-606");
+    expect(resolveMinimumWage(SEED_RULESET, "non_agricultural", "2023-10-01")?.decree).toContain("2-23-799");
+    const ids = SEED_RULESET.paidHolidays.map((h) => h.id);
+    expect(ids).not.toContain("new-year");
+    expect(ids).toEqual(expect.arrayContaining(["amazigh-new-year", "unity"]));
+  });
+
   it("minimum wage periods are contiguous for each sector", () => {
+    const sectors = ["non_agricultural", "agricultural"] as const;
+    for (const sector of sectors) {
+      const entries = SEED_RULESET.minimumWages.filter((w) => w.sector === sector).sort((a, b) => a.validFrom.localeCompare(b.validFrom));
+      for (let i = 1; i < entries.length; i++) {
+        const prevEnd = entries[i - 1].validTo;
+        expect(prevEnd, `${entries[i - 1].id} end`).not.toBeNull();
+        const next = new Date(`${prevEnd}T00:00:00Z`);
+        next.setUTCDate(next.getUTCDate() + 1);
+        expect(next.toISOString().slice(0, 10), entries[i].id).toBe(entries[i].validFrom);
+      }
+    }
     expect(resolveMinimumWage(SEED_RULESET, "non_agricultural", "2026-01-01")?.amount).toBe("17.92");
     expect(resolveMinimumWage(SEED_RULESET, "non_agricultural", "2025-12-31")?.amount).toBe("17.10");
     expect(resolveMinimumWage(SEED_RULESET, "agricultural", "2026-04-01")?.amount).toBe("97.44");
@@ -86,6 +105,10 @@ describe("translations", () => {
       run({ contractType: "CDD", terminationReason: "cdd_early_termination", startDate: "2025-01-01", endDate: "2025-06-30", cddPlannedEndDate: "2025-12-31" }),
       run({ contractType: "CDD", cddRequalifiedAsCdi: true }),
       run({ regime: "domestic", weeklyHours: "48", grossMonthly: "1500", startDate: "2022-01-01", endDate: "2024-12-31" }),
+      run({ regime: "domestic", weeklyHours: "48", grossMonthly: "2500", startDate: "2015-01-01", endDate: "2020-12-31", terminationReason: "gross_misconduct" }),
+      run({ regime: "domestic", weeklyHours: "48", grossMonthly: "2500", startDate: "2019-01-01", endDate: "2019-04-30", employeeRepresentative: true }),
+      run({ grossMonthly: "3000", employeeRepresentative: true, options: { dismissalPartialYear: "prorata", damagesPartialYear: "prorata" } }),
+      run({ startDate: "2026-01-01", endDate: "2026-05-15" }),
       run({ sector: "agricultural", weeklyHours: "48", grossMonthly: "1500", endDate: "2026-06-30", legalDate: "2025-06-30" }),
       run({ grossMonthly: "6000", baseSalary: "5000", noticeStatus: "partial", noticeDaysServed: "5" }),
       run({ suspensions: [{ id: "s", type: "strike", from: "2022-01-01", to: "2022-01-10" }] }),

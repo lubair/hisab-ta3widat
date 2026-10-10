@@ -235,6 +235,12 @@ export function CalculatorForm({ value: v, onChange, suspensionDefaults }: Props
             <Checkbox checked={Boolean(v.employeeUnder18)} onCheckedChange={(c) => set("employeeUnder18", Boolean(c))} />
             {t("form.under18")}
           </label>
+          {v.regime === "labor_code" ? (
+            <label className="flex items-center gap-2.5 text-sm sm:col-span-2">
+              <Checkbox checked={Boolean(v.employeeRepresentative)} onCheckedChange={(c) => set("employeeRepresentative", Boolean(c))} />
+              {t("form.representative")}
+            </label>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -517,16 +523,16 @@ export function CalculatorForm({ value: v, onChange, suspensionDefaults }: Props
               <div className="grid gap-4 pb-4 sm:grid-cols-2">
                 <SelectField
                   label={t("form.option.dismissalPartialYear")}
-                  value={v.options.dismissalPartialYear ?? "prorata"}
+                  value={v.options.dismissalPartialYear ?? "full_year"}
                   onChange={(x) => set("options", { ...v.options, dismissalPartialYear: x })}
-                  options={(["prorata", "full_year"] as const).map((x) => ({ value: x, label: t(`form.option.partial.${x}`) }))}
+                  options={(["full_year", "prorata"] as const).map((x) => ({ value: x, label: t(`form.option.partial.${x}`) }))}
                 />
                 {!domestic ? (
                   <SelectField
                     label={t("form.option.damagesPartialYear")}
-                    value={v.options.damagesPartialYear ?? "prorata"}
+                    value={v.options.damagesPartialYear ?? "full_year"}
                     onChange={(x) => set("options", { ...v.options, damagesPartialYear: x })}
-                    options={(["prorata", "full_year"] as const).map((x) => ({ value: x, label: t(`form.option.partial.${x}`) }))}
+                    options={(["full_year", "prorata"] as const).map((x) => ({ value: x, label: t(`form.option.partial.${x}`) }))}
                   />
                 ) : null}
                 {!domestic ? (

@@ -59,6 +59,15 @@ function MiniSelect<T extends string>({
   );
 }
 
+function IssueCount({ count }: { count: number }) {
+  if (count === 0) return null;
+  return (
+    <span className="ms-1 inline-flex min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[11px] font-semibold leading-5 text-white tabular">
+      {count}
+    </span>
+  );
+}
+
 function VerificationBadge({ status }: { status: VerificationStatus }) {
   const { t } = useI18n();
   return (
@@ -80,10 +89,12 @@ function RuleEditor({
   rule,
   onChange,
   onDelete,
+  isInvalid,
 }: {
   rule: AnyRuleEntry;
   onChange: (rule: AnyRuleEntry) => void;
   onDelete: () => void;
+  isInvalid: (field: string) => true | undefined;
 }) {
   const { t, locale } = useI18n();
   const [text, setText] = useState(() => JSON.stringify(rule.value, null, 2));
@@ -106,7 +117,13 @@ function RuleEditor({
       <div className="mt-3 grid gap-3 sm:grid-cols-3">
         <div className="flex flex-col gap-1">
           <Label className="text-xs">{t("admin.minwage.from")}</Label>
-          <Input type="date" className="h-8 text-xs" value={rule.validFrom} onChange={(e) => onChange({ ...rule, validFrom: e.target.value } as AnyRuleEntry)} />
+          <Input
+            type="date"
+            className="h-8 text-xs"
+            value={rule.validFrom}
+            aria-invalid={isInvalid("validFrom")}
+            onChange={(e) => onChange({ ...rule, validFrom: e.target.value } as AnyRuleEntry)}
+          />
         </div>
         <div className="flex flex-col gap-1">
           <Label className="text-xs">{t("admin.minwage.to")}</Label>
@@ -114,6 +131,7 @@ function RuleEditor({
             type="date"
             className="h-8 text-xs"
             value={rule.validTo ?? ""}
+            aria-invalid={isInvalid("validTo")}
             onChange={(e) => onChange({ ...rule, validTo: e.target.value || null } as AnyRuleEntry)}
           />
         </div>
@@ -170,6 +188,10 @@ export function RulesAdmin({ initialRuleSet, initialVersions, initialActiveId, d
   const issues = useMemo(() => validateRuleSet(draft), [draft]);
   const allIssues = issues.length ? issues : serverIssues;
   const canSave = !locked && dirty && issues.length === 0 && confirmed && note.trim().length > 0 && !busy;
+  const invalidPaths = useMemo(() => new Set(allIssues.map((i) => i.path)), [allIssues]);
+  const isInvalid = (path: string): true | undefined => (invalidPaths.has(path) ? true : undefined);
+  const issueCount = (prefix: string) => allIssues.filter((i) => i.path.startsWith(prefix)).length;
+  const rowHasIssue = (prefix: string) => allIssues.some((i) => i.path.startsWith(prefix));
 
   const sectorOptions = [
     { value: "non_agricultural" as const, label: t("form.sector.non_agricultural") },
@@ -306,20 +328,31 @@ export function RulesAdmin({ initialRuleSet, initialVersions, initialActiveId, d
         </Alert>
       ) : null}
 
+      {allIssues.length > 0 ? (
+        <Alert variant="destructive" className="mt-4" role="status">
+          <AlertTriangle aria-hidden />
+          <AlertTitle>{t("admin.issues", { count: allIssues.length })}</AlertTitle>
+          <AlertDescription>{t("admin.issues.hint")}</AlertDescription>
+        </Alert>
+      ) : null}
+
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
         <Tabs defaultValue="minwage" className="min-w-0">
           <TabsList className="h-auto w-full flex-wrap justify-start sm:w-fit">
             <TabsTrigger value="minwage" className="px-3 py-1.5">
               <Landmark aria-hidden />
               {t("admin.tab.minwage")}
+              <IssueCount count={issueCount("minimumWages")} />
             </TabsTrigger>
             <TabsTrigger value="rules" className="px-3 py-1.5">
               <ScrollText aria-hidden />
               {t("admin.tab.rules")}
+              <IssueCount count={issueCount("rules")} />
             </TabsTrigger>
             <TabsTrigger value="provisions" className="px-3 py-1.5">
               <ScrollText aria-hidden />
               {t("admin.tab.provisions")}
+              <IssueCount count={issueCount("provisions")} />
             </TabsTrigger>
             <TabsTrigger value="history" className="px-3 py-1.5">
               <History aria-hidden />
@@ -350,7 +383,7 @@ export function RulesAdmin({ initialRuleSet, initialVersions, initialActiveId, d
                   </TableHeader>
                   <TableBody>
                     {draft.minimumWages.map((w, i) => (
-                      <TableRow key={w.id} className="align-top">
+                      <TableRow key={w.id} className={cn("align-top", rowHasIssue(`minimumWages[${i}].`) && "bg-destructive/5")}>
                         <TableCell>
                           <MiniSelect label={t("admin.minwage.sector")} value={w.sector} options={sectorOptions} onChange={(v) => updateWage(i, { sector: v })} />
                         </TableCell>
@@ -361,26 +394,27 @@ export function RulesAdmin({ initialRuleSet, initialVersions, initialActiveId, d
                               className="h-8 text-xs tabular"
                               value={w.amount}
                               aria-label={t("admin.minwage.amount")}
+                              aria-invalid={isInvalid(`minimumWages[${i}].amount`)}
                               onChange={(e) => updateWage(i, { amount: e.target.value.replace(",", ".").trim() })}
                             />
                             <span className="shrink-0 text-[11px] text-muted-foreground">/{t(`admin.minwage.unit.${w.unit}`)}</span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Input type="date" className="h-8 text-xs" value={w.validFrom} aria-label={t("admin.minwage.from")} onChange={(e) => updateWage(i, { validFrom: e.target.value })} />
+                          <Input type="date" className="h-8 text-xs" value={w.validFrom} aria-label={t("admin.minwage.from")} aria-invalid={isInvalid(`minimumWages[${i}].validFrom`)} onChange={(e) => updateWage(i, { validFrom: e.target.value })} />
                         </TableCell>
                         <TableCell>
-                          <Input type="date" className="h-8 text-xs" value={w.validTo ?? ""} aria-label={t("admin.minwage.to")} onChange={(e) => updateWage(i, { validTo: e.target.value || null })} />
+                          <Input type="date" className="h-8 text-xs" value={w.validTo ?? ""} aria-label={t("admin.minwage.to")} aria-invalid={isInvalid(`minimumWages[${i}].validTo`)} onChange={(e) => updateWage(i, { validTo: e.target.value || null })} />
                         </TableCell>
                         <TableCell>
-                          <Input className="h-8 text-xs" value={w.decree} aria-label={t("admin.minwage.decree")} onChange={(e) => updateWage(i, { decree: e.target.value })} />
+                          <Input className="h-8 text-xs" value={w.decree} aria-label={t("admin.minwage.decree")} aria-invalid={isInvalid(`minimumWages[${i}].decree`)} onChange={(e) => updateWage(i, { decree: e.target.value })} />
                         </TableCell>
                         <TableCell>
                           <Input className="h-8 text-xs" value={w.bulletinOfficiel ?? ""} aria-label={t("admin.minwage.bo")} onChange={(e) => updateWage(i, { bulletinOfficiel: e.target.value || undefined })} />
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
-                            <Input dir="ltr" className="h-8 text-xs" value={w.officialUrl} aria-label={t("admin.minwage.url")} onChange={(e) => updateWage(i, { officialUrl: e.target.value.trim() })} />
+                            <Input dir="ltr" className="h-8 text-xs" value={w.officialUrl} aria-label={t("admin.minwage.url")} aria-invalid={isInvalid(`minimumWages[${i}].officialUrl`)} onChange={(e) => updateWage(i, { officialUrl: e.target.value.trim() })} />
                             {/^https:\/\/\S+$/.test(w.officialUrl) ? (
                               <a href={w.officialUrl} target="_blank" rel="noreferrer noopener" className="text-muted-foreground hover:text-primary" aria-label={t("admin.open")}>
                                 <ExternalLink className="size-3.5" />
@@ -425,12 +459,16 @@ export function RulesAdmin({ initialRuleSet, initialVersions, initialActiveId, d
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="flex flex-col gap-3">
+                    {issueCount(`rules.${key}`) > 0 ? (
+                      <p className="text-xs font-medium text-destructive">{t("admin.rule.overlap")}</p>
+                    ) : null}
                     {entries.map(({ rule, index }) => (
                       <RuleEditor
                         key={rule.id}
                         rule={rule}
                         onChange={(next) => setDraft((d) => ({ ...d, rules: d.rules.map((r, j) => (j === index ? next : r)) }))}
                         onDelete={() => setDraft((d) => ({ ...d, rules: d.rules.filter((_, j) => j !== index) }))}
+                        isInvalid={(field) => isInvalid(`rules[${index}].${field}`)}
                       />
                     ))}
                     <Button variant="outline" size="sm" className="w-fit" onClick={() => addRulePeriod(key)}>
@@ -485,6 +523,7 @@ export function RulesAdmin({ initialRuleSet, initialVersions, initialActiveId, d
                             className="h-8 text-xs"
                             value={p.officialUrl}
                             aria-label={t("admin.minwage.url")}
+                            aria-invalid={isInvalid(`provisions.${p.id}.officialUrl`)}
                             onChange={(e) => setDraft((d) => ({ ...d, provisions: d.provisions.map((x, j) => (j === i ? { ...x, officialUrl: e.target.value.trim() } : x)) }))}
                           />
                         </TableCell>
@@ -575,7 +614,7 @@ export function RulesAdmin({ initialRuleSet, initialVersions, initialActiveId, d
                 <Label htmlFor="rules-version" className="text-xs">
                   {t("admin.rulesVersion")}
                 </Label>
-                <Input id="rules-version" dir="ltr" value={draft.version} onChange={(e) => setDraft((d) => ({ ...d, version: e.target.value.trim() }))} />
+                <Input id="rules-version" dir="ltr" aria-invalid={isInvalid("version")} value={draft.version} onChange={(e) => setDraft((d) => ({ ...d, version: e.target.value.trim() }))} />
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="rules-author" className="text-xs">

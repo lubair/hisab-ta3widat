@@ -465,4 +465,6 @@ export const fr: Record<string, string> = {
   "note.leave_started_month": "Art. 251 : tout mois entamé compte comme un mois entier ({raw} → {months} mois).",
   "note.leave_full_months_only": "Moins de {min} mois de service : seuls les mois entiers comptent (art. 252) ({raw} → {months} mois).",
   "form.representative": "Délégué des salariés ou représentant syndical (art. 58)",
+  "admin.issues.hint": "Les champs concernés sont surlignés en rouge. L'enregistrement est bloqué tant qu'ils ne sont pas corrigés.",
+  "admin.rule.overlap": "Les périodes d'effet de cette règle se chevauchent : fermez la période précédente par une date de fin.",
 };

@@ -465,4 +465,6 @@ export const ar: Record<string, string> = {
   "note.leave_started_month": "المادة 251: كل شهر بدئ فيه يعتبر شهرا كاملا ({raw} ← {months} شهر).",
   "note.leave_full_months_only": "أقل من {min} أشهر من الشغل: لا تحتسب إلا الأشهر الكاملة (المادة 252) ({raw} ← {months} شهر).",
   "form.representative": "مندوب الأجراء أو ممثل نقابي (المادة 58)",
+  "admin.issues.hint": "الحقول المعنية مميزة باللون الأحمر. يبقى الحفظ معطلا إلى حين تصحيحها.",
+  "admin.rule.overlap": "فترات سريان هذه القاعدة متداخلة: أغلق الفترة السابقة بتاريخ انتهاء.",
 };
